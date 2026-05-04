@@ -14,8 +14,9 @@ from flux2.sampling import (
     batched_prc_txt,
 )
 
-MODEL_VARIANT = "klein-4b"
-os.environ["KLEIN_4B_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B"
+MODEL_VARIANT = "flux.2-klein-4b"
+os.environ["KLEIN_4B_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B/flux-2-klein-4b.safetensors"
+os.environ["AE_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B/ae.safetensors"
 
 print("Ucitavam model...")
 device = torch.device("cuda")
