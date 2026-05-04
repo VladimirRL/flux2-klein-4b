@@ -16,7 +16,8 @@ from flux2.sampling import (
 
 MODEL_VARIANT = "flux.2-klein-4b"
 os.environ["KLEIN_4B_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B/flux-2-klein-4b.safetensors"
-os.environ["AE_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B/ae.safetensors"
+os.environ["AE_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B/vae/diffusion_pytorch_model.safetensors"
+
 
 print("Ucitavam model...")
 device = torch.device("cuda")
