@@ -155,7 +155,7 @@ If you find the provided code or models useful for your research, consider citin
 
 ```bib
 @misc{flux-2-2025,
-    author={Black Forest Labs},
+    author={Black Forest  Labs},
     title={{FLUX.2: Frontier Visual Intelligence}},
     year={2025},
     howpublished={\url{https://bfl.ai/blog/flux-2}},
