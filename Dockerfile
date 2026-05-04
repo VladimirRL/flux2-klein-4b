@@ -12,16 +12,22 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN pip install --no-cache-dir \
     runpod \
-    torch==2.3.0 \
-    torchvision \
+    torch==2.3.0+cu121 \
+    torchvision==0.18.0+cu121 \
+    --extra-index-url https://download.pytorch.org/whl/cu121
+
+RUN pip install --no-cache-dir \
     safetensors \
     Pillow \
     einops \
     transformers \
-    huggingface_hub
+    huggingface_hub \
+    fire \
+    openai
 
 WORKDIR /app
 COPY . .
-RUN pip install -e . --extra-index-url https://download.pytorch.org/whl/cu121
+
+ENV PYTHONPATH=/app/src
 
 CMD ["python", "handler.py"]
