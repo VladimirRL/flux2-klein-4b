@@ -4,12 +4,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y \
-    python3.12 python3.12-pip python3.12-dev \
+    python3 python3-pip python3-dev \
     git wget curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -sf /usr/bin/python3.12 /usr/bin/python && \
-    ln -sf /usr/bin/python3.12 /usr/bin/python3
+RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN pip install --no-cache-dir \
     runpod \
@@ -24,7 +23,5 @@ RUN pip install --no-cache-dir \
 WORKDIR /app
 COPY . .
 RUN pip install -e . --extra-index-url https://download.pytorch.org/whl/cu121
-
-COPY handler.py .
 
 CMD ["python", "handler.py"]
