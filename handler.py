@@ -2,21 +2,27 @@ import runpod
 import torch
 import base64
 import os
-from pathlib import Path
 from io import BytesIO
 from PIL import Image
+from einops import rearrange
 
 from flux2.util import load_flow_model, load_ae, load_text_encoder
-from flux2.sampling import denoise, get_schedule, unpack
+from flux2.sampling import (
+    denoise,
+    get_schedule,
+    encode_image_refs,
+    batched_prc_txt,
+)
 
-MODEL_PATH = os.environ.get("KLEIN_4B_MODEL_PATH", "/runpod-volume/models/FLUX.2-klein-4B")
+MODEL_VARIANT = "klein-4b"
+os.environ["KLEIN_4B_MODEL_PATH"] = "/runpod-volume/models/FLUX.2-klein-4B"
 
 print("Ucitavam model...")
 device = torch.device("cuda")
 
-model = load_flow_model("klein-4b", device=device)
-ae = load_ae("klein-4b", device=device)
-text_encoder = load_text_encoder("klein-4b", device=device)
+model = load_flow_model(MODEL_VARIANT, device=device)
+ae = load_ae(MODEL_VARIANT, device=device)
+text_encoder = load_text_encoder(MODEL_VARIANT, device=device)
 print("Model ucitan!")
 
 
@@ -49,23 +55,59 @@ def handler(job):
     rng = torch.Generator(device=device)
     if seed is not None:
         rng.manual_seed(seed)
+    else:
+        seed = int(rng.seed())
 
     with torch.inference_mode():
-        result = denoise(
+        # Encode text
+        txt_tokens = text_encoder([prompt])
+        txt, txt_ids = batched_prc_txt(txt_tokens)
+        txt = txt.to(device, dtype=torch.bfloat16)
+        txt_ids = txt_ids.to(device)
+
+        # Prepare noise
+        h_lat = height // 16
+        w_lat = width // 16
+        img_noise = torch.randn(
+            1, h_lat * w_lat, 64,
+            device=device, dtype=torch.bfloat16, generator=rng
+        )
+        img_ids = torch.zeros(1, h_lat * w_lat, 4, device=device, dtype=torch.int32)
+        for i in range(h_lat):
+            for j in range(w_lat):
+                img_ids[0, i * w_lat + j, 1] = i
+                img_ids[0, i * w_lat + j, 2] = j
+
+        # Encode reference images
+        img_cond_seq, img_cond_seq_ids = None, None
+        if input_images:
+            img_cond_seq, img_cond_seq_ids = encode_image_refs(ae, input_images)
+            img_cond_seq = img_cond_seq.to(device)
+            img_cond_seq_ids = img_cond_seq_ids.to(device)
+
+        # Denoise
+        timesteps = get_schedule(num_steps, h_lat * w_lat)
+        result_lat = denoise(
             model=model,
-            ae=ae,
-            text_encoder=text_encoder,
-            prompt=prompt,
-            width=width,
-            height=height,
-            num_steps=num_steps,
+            img=img_noise,
+            img_ids=img_ids,
+            txt=txt,
+            txt_ids=txt_ids,
+            timesteps=timesteps,
             guidance=guidance,
-            input_images=input_images,
-            generator=rng,
-            device=device,
+            img_cond_seq=img_cond_seq,
+            img_cond_seq_ids=img_cond_seq_ids,
         )
 
-    return {"image": image_to_b64(result), "seed": seed}
+        # Decode
+        result_lat = rearrange(result_lat, "b (h w) c -> b c h w", h=h_lat, w=w_lat)
+        result_img = ae.decode(result_lat)
+        result_img = ((result_img + 1) / 2).clamp(0, 1)
+        result_pil = Image.fromarray(
+            (result_img[0].permute(1, 2, 0).cpu().float().numpy() * 255).astype("uint8")
+        )
+
+    return {"image": image_to_b64(result_pil), "seed": seed}
 
 
 runpod.serverless.start({"handler": handler})
