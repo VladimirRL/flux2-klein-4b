@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -11,12 +11,12 @@ RUN apt-get update && apt-get install -y \
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 RUN pip install --no-cache-dir \
-    runpod \
-    torch==2.3.0+cu121 \
-    torchvision==0.18.0+cu121 \
-    --extra-index-url https://download.pytorch.org/whl/cu121
+    torch==2.4.0 \
+    torchvision==0.19.0 \
+    --extra-index-url https://download.pytorch.org/whl/cu124
 
 RUN pip install --no-cache-dir \
+    runpod \
     safetensors \
     Pillow \
     einops \
